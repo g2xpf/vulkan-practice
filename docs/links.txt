@@ -1,0 +1,5 @@
+// vulkan tutorial
+https://vulkan-tutorial.com
+
+// vulkan tutorial in Rust
+https://github.com/bwasty/vulkan-tutorial-rs
