@@ -7,9 +7,20 @@
 #include <stdexcept>
 #include <functional>
 #include  <cstdlib>
+#include  <cstring>
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
+
+const std::vector<const char*> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
+};
+
+#ifdef NDEBUG
+    const bool enableValidationLayers = false;
+#else
+    const bool enableValidationLayers = true;
+#endif
 
 class HelloTriangleApplication {
 public:
@@ -41,21 +52,58 @@ private:
 
     void printAvailableExtensions() {
         // 使用可能な Vulkan Extension の確認
-
         uint32_t extensionCount = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
         std::vector<VkExtensionProperties> extensions(extensionCount);
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
+        // 出力
         std::cout << extensionCount << " available extension(s): " << std::endl;
-
         for(const auto& extension: extensions) {
             std::cout << "\t" << extension.extensionName << std::endl;
         }
     }
 
+    bool checkValidationLayerSupport() {
+        // 使用可能な Validation Layer の確認
+        uint32_t layerCount = 0;
+        vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+        std::vector<VkLayerProperties> availableLayers(layerCount);
+        vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+        // 出力
+        std::cout << layerCount << " available validation layer(s): " << std::endl;
+        for(auto const& layerProperties: availableLayers) {
+            std::cout << "\t" << layerProperties.layerName << std::endl;
+        }
+
+        // チェック
+        for(const char* layerName: validationLayers) {
+            bool layerFound = false;
+
+            for(const auto& layerProperties: availableLayers) {
+                if(strcmp(layerName, layerProperties.layerName) == 0) {
+                    layerFound = true;
+                    break;
+                }
+            }
+
+            if(!layerFound) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     void createInstance() {
+        // Validation layer が使用できるかの確認
+        if(enableValidationLayers && !checkValidationLayerSupport()) {
+            throw std::runtime_error("validation layers requested, but not available");
+        }
+
         // このアプリ自体の設定.
         // ココで与えるパラメータはオプショナルで,
         // 最適化に関わったりする.
@@ -80,6 +128,13 @@ private:
 
         createInfo.enabledExtensionCount = glfwExtensionCount;
         createInfo.ppEnabledExtensionNames = glfwExtensions;
+
+        if(enableValidationLayers) {
+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.ppEnabledLayerNames = validationLayers.data();
+        } else {
+            createInfo.enabledLayerCount = 0;
+        }
 
         // VkInstance の作成
         // 第二引数は custom allocator.
